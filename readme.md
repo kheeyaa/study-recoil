@@ -9,9 +9,43 @@ https://recoiljs.org/ko/docs/introduction/motivation
 Atom은 하나의 상태이다.
 컴포넌트가 구독할 수 있는 리액트의 상태로, Atom의 값을 변경하면 그것을 구독하고 있는 컴포넌트들이 모두 다시 렌더링된다. 고유한 키값과 디폴트 값을 가져야하며, 디폴트 값은 정적인 값, 함수 또는 비동기 함수가 될 수 있다.
 
+```ts
+export type TodoListType = {
+  id: number;
+  text: string;
+  isComplete: boolean;
+};
+
+export const todoListState = atom<TodoListType[]>({
+  key: "todoListState",
+  default: [],
+});
+```
+
 ### Selector
 
 selector는 상태에서 파생된 데이터로, 다른 atom에 의존하는 동적인 데이터를 만들 수 있게 해준다. selector는 **순수함수**로 같은 입력이 들어오면 그 입력에 대한 출력은 항상 같아야 한다. 또한 **read-only** 한 RecoilValueReadOnly 객체로서 return 값 만을 가질 수 있고 값을 set 할 순 없는 특징을 가지고 있다.
+
+```ts
+/** selector을 사용해 만든 파생 데이터 - 통계값 (총개수, 완료된 항목 개수, 미완료 항목 개수, 완료된 항목의 백분율) */
+export const todoListStatsState = selector({
+  key: "todoListStatsState",
+  get: ({ get }) => {
+    const todoList = get(todoListState);
+    const totalNum = todoList.length;
+    const totalCompletedNum = todoList.filter((item) => item.isComplete).length;
+    const totalUncompletedNum = totalNum - totalCompletedNum;
+    const percentCompleted = totalNum === 0 ? 0 : totalCompletedNum / totalNum;
+
+    return {
+      totalNum,
+      totalCompletedNum,
+      totalUncompletedNum,
+      percentCompleted,
+    };
+  },
+});
+```
 
 selector는 set이라는 이름의 함수를 받아서 사용할 수 있는데, 이건 자기 자신을 set하는 것이 아닌, 다른 selector와 atom을 set하여야 한다.
 
@@ -206,7 +240,7 @@ const useTodoList = create((set) => ({
 }));
 ```
 
-하지만 같은 store 내의 상태만을 참조하는 파생 데이터를 만들 수 있으며, 다른 store에 있는 상태에 의존하는 파생데이터는 만들 수 없다. 공식으로 파생데이터를 지원하지 않다보니, **hook**을 만들어 별도로 빼내서 사용할수도 있겠다.
+하지만 `getter`를 사용하면 같은 store 내의 상태만을 참조하는 파생 데이터를 만들 수 있으며, 다른 store에 있는 상태에 의존하는 파생데이터는 만들 수 없다. 공식으로 파생데이터를 지원하지 않다보니, **hook**으로 파생 데이터를 별도로 만드는 방법을 사용해야한다.
 
 ```ts
 const useTodoListDerived = () => {
